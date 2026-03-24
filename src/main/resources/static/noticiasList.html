@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
+    <title>NerdSpace</title>
+    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="icon" href="./img/nerd.png" type="image/x-icon" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="cabecalho"></header>
+      <main class="meio">
+        <div class="noticias">
+          <h2 class="title-destaques">Notícias Recentes</h2>
+          <div id="noticias-grid"></div>
+        </div>
+      </main>
+      <footer class="rodape"></footer>
+    </div>
+    <script src="./js/script.js"></script>
+    <script>
+      /**
+       * =========================================================
+       * CONFIGURAÇÃO
+       * =========================================================
+       * Centraliza valores que podem mudar sem afetar a lógica.
+       */
+      const CONFIG = Object.freeze({
+        API_BASE_URL: "http://localhost:8080",
+        FALLBACK_IMAGE: "https://via.placeholder.com/300x200?text=Sem+Imagem",
+      });
+
+      /**
+       * Normaliza a resposta da API para suportar lista direta ou paginada.
+       *
+       * @param {unknown} data
+       * @returns {Array<Object>}
+       */
+      function extractNewsList(data) {
+        if (Array.isArray(data)) return data;
+        if (Array.isArray(data?.content)) return data.content;
+        return [];
+      }
+
+      /**
+       * Formata datas para exibição no padrão brasileiro.
+       *
+       * @param {string | Array<number>} rawDate
+       * @returns {string}
+       */
+      function formatDate(rawDate) {
+        if (!rawDate) return "Data indisponível";
+
+        const date = Array.isArray(rawDate)
+          ? new Date(
+              rawDate[0],
+              rawDate[1] - 1,
+              rawDate[2],
+              rawDate[3] || 0,
+              rawDate[4] || 0,
+            )
+          : new Date(rawDate);
+
+        if (Number.isNaN(date.getTime())) {
+          return "Data inválida";
+        }
+
+        return date.toLocaleDateString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        });
+      }
+
+      /**
+       * Cria o card de notícia com navegação para a página de detalhes.
+       *
+       * A montagem fica isolada para simplificar manutenção e reutilização.
+       *
+       * @param {Object} noticia
+       * @returns {HTMLDivElement}
+       */
+      function createNewsCard(noticia) {
+        const card = document.createElement("div");
+        card.className = "noticia-card";
+
+        card.innerHTML = `
+          <div class="noticia-img-wrapper">
+            <img
+              src="${noticia.image || CONFIG.FALLBACK_IMAGE}"
+              alt="${noticia.title || "Notícia"}"
+              loading="lazy"
+            />
+          </div>
+
+          <div class="noticia-info">
+            <span class="noticia-data">
+              ${formatDate(noticia.timePosted || noticia.time_posted)}
+            </span>
+
+            <h3>${noticia.title || "Sem título"}</h3>
+
+            <p>${noticia.subTitle || "Sem subtítulo."}</p>
+
+            <a href="newsDetail.html?id=${noticia.id}" class="btn-ler-mais">
+              Ler notícia
+            </a>
+          </div>
+        `;
+
+        return card;
+      }
+
+      /**
+       * Busca a lista de notícias e renderiza o conteúdo na tela.
+       *
+       * Separar busca e renderização reduz acoplamento e facilita ajustes futuros.
+       */
+      async function carregarNoticias() {
+        const container = document.getElementById("noticias-grid");
+        if (!container) return;
+
+        container.innerHTML = "<p>Carregando...</p>";
+
+        try {
+          const response = await fetch(
+            `${CONFIG.API_BASE_URL}/noticia/lista?size=100`,
+          );
+
+          if (!response.ok) {
+            throw new Error(`Erro HTTP: ${response.status}`);
+          }
+
+          const data = await response.json();
+          const noticias = extractNewsList(data);
+
+          container.innerHTML = "";
+
+          if (noticias.length === 0) {
+            container.innerHTML = "<p>Nenhuma notícia encontrada.</p>";
+            return;
+          }
+
+          noticias.forEach((noticia) => {
+            container.appendChild(createNewsCard(noticia));
+          });
+        } catch (error) {
+          console.error("Erro ao carregar notícias:", error);
+          container.innerHTML = "<p>Erro ao carregar as notícias.</p>";
+        }
+      }
+
+      /**
+       * Inicializa a página quando o DOM estiver pronto.
+       */
+      document.addEventListener("DOMContentLoaded", () => {
+        carregarNoticias();
+      });
+    </script>
+  </body>
+</html>

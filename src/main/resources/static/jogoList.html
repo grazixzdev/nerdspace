@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
+    <title>NerdSpace</title>
+    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="icon" href="./img/nerd.png" type="image/x-icon" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="cabecalho"></header>
+      <main class="meio">
+        <div class="destaques" id="lista-jogos">
+          <h2 class="title-destaques">Jogos</h2>
+          <div id="lista-jogos-grid" class="grid-midias"></div>
+        </div>
+      </main>
+      <footer class="rodape"></footer>
+    </div>
+    <script src="./js/script.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        carregarMidia("jogo", "lista-jogos-grid");
+      });
+    </script>
+  </body>
+</html>

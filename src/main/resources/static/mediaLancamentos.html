@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
+    <title>NerdSpace</title>
+    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="icon" href="./img/nerd.png" type="image/x-icon" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="cabecalho"></header>
+
+      <main class="meio">
+        <div class="destaques" id="lista-lancamentos">
+          <h2 class="title-destaques">Lançamentos</h2>
+          <div id="lista-lancamentos-grid" class="grid-midias"></div>
+        </div>
+      </main>
+
+      <footer class="rodape"></footer>
+    </div>
+
+    <script src="./js/script.js"></script>
+    <script>
+      /**
+       * =========================================================
+       * CONFIGURAÇÃO
+       * =========================================================
+       * Centraliza valores que podem mudar com facilidade.
+       */
+      const CONFIG = Object.freeze({
+        API_BASE_URL: "http://localhost:8080",
+        FALLBACK_IMAGE: "https://via.placeholder.com/200x300?text=Sem+Capa",
+      });
+
+      /**
+       * Normaliza a resposta da API para lidar com paginação ou lista direta.
+       *
+       * @param {unknown} data
+       * @returns {Array<Object>}
+       */
+      function extractMediaList(data) {
+        if (Array.isArray(data)) return data;
+        if (Array.isArray(data?.content)) return data.content;
+        return [];
+      }
+
+      /**
+       * Cria um card de mídia com fallback de imagem e navegação para detalhes.
+       *
+       * @param {Object} item
+       * @returns {HTMLImageElement}
+       */
+      function createMediaImage(item) {
+        const img = document.createElement("img");
+
+        img.src = item.image;
+        img.alt = item.translatedTitle || item.title || "Mídia";
+        img.loading = "lazy";
+        img.className = "img-media";
+
+        img.addEventListener("click", () => {
+          const type = (item.type || "").toLowerCase();
+          window.location.href = `infoMedia.html?id=${item.id}&type=${type}`;
+        });
+
+        img.addEventListener("error", () => {
+          img.src = CONFIG.FALLBACK_IMAGE;
+        });
+
+        return img;
+      }
+
+      /**
+       * Busca e renderiza os lançamentos na grid.
+       *
+       * Decisão:
+       * A função separa busca e renderização para facilitar manutenção
+       * e reaproveitamento em outras páginas.
+       */
+      async function carregarLancamentos() {
+        const grid = document.getElementById("lista-lancamentos-grid");
+
+        if (!grid) return;
+
+        grid.innerHTML = "<p>Carregando...</p>";
+
+        try {
+          const response = await fetch(
+            `${CONFIG.API_BASE_URL}/media/lista-recentes?size=100`,
+          );
+
+          if (!response.ok) {
+            throw new Error(`Erro HTTP: ${response.status}`);
+          }
+
+          const data = await response.json();
+          const lista = extractMediaList(data);
+
+          grid.innerHTML = "";
+
+          if (lista.length === 0) {
+            grid.innerHTML = "<p>Nenhum lançamento encontrado.</p>";
+            return;
+          }
+
+          lista.forEach((item) => {
+            grid.appendChild(createMediaImage(item));
+          });
+        } catch (error) {
+          console.error("Erro ao carregar lançamentos:", error);
+          grid.innerHTML = "<p>Erro ao carregar os lançamentos.</p>";
+        }
+      }
+
+      /**
+       * Inicializa a página quando o DOM estiver pronto.
+       */
+      document.addEventListener("DOMContentLoaded", () => {
+        carregarLancamentos();
+      });
+    </script>
+  </body>
+</html>

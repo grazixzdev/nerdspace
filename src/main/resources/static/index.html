@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
+    <title>NerdSpace</title>
+    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="icon" href="./img/nerd.png" type="image/x-icon" />
+    <script src="./js/script.js" defer></script>
+  </head>
+  <body>
+    <div class="container">
+      <header class="cabecalho"></header>
+      <main class="meio">
+        <div class="fixado" id="banner-noticias">
+          <a href="#" id="link-banner">
+            <img
+              src="./img/test.jpg"
+              alt="fixado1"
+              id="img-banner"
+              width="55%"
+            />
+            <div class="info-banner">
+              <h2 id="titulo-banner">Carregando últimas notícias...</h2>
+            </div>
+          </a>
+          <div class="radio-fixado">
+            <input
+              type="radio"
+              name="fixado"
+              id="fix1"
+              checked
+              onchange="mudarNoticiaManual(0)"
+            />
+            <input
+              type="radio"
+              name="fixado"
+              id="fix2"
+              onchange="mudarNoticiaManual(1)"
+            />
+            <input
+              type="radio"
+              name="fixado"
+              id="fix3"
+              onchange="mudarNoticiaManual(2)"
+            />
+            <input
+              type="radio"
+              name="fixado"
+              id="fix4"
+              onchange="mudarNoticiaManual(3)"
+            />
+          </div>
+        </div>
+        <div class="destaques" id="lista-lancamentos">
+          <h2 class="title-lancamentos">Lançamentos</h2>
+          <div id="lista-lancamentos-grid" class="grid-midias"></div>
+          <a class="btn-more" href="mediaLancamentos.html">Ver Mais</a>
+        </div>
+        <div class="destaques" id="lista-populares">
+          <h2 class="title-lancamentos">Destaques</h2>
+          <div id="lista-populares-grid" class="grid-midias"></div>
+          <a class="btn-more" href="mediaPopulares.html">Ver Mais</a>
+        </div>
+      </main>
+      <footer class="rodape"></footer>
+    </div>
+  </body>
+</html>

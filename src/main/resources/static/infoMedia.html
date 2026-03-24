@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Detalhes - NerdSpace</title>
+    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="icon" href="./img/nerd.png" type="image/x-icon" />
+    <script src="./js/script.js" defer></script>
+  </head>
+  <body>
+    <div class="container">
+      <main class="meio">
+        <div class="meio-info" id="detalhes-container">
+          <p>Carregando informações...</p>
+        </div>
+        <a id="btn-voltar"> voltar</a>
+      </main>
+    </div>
+
+    <script>
+      /**
+       * Base da API utilizada para buscar os detalhes da mídia.
+       * Centralizar essa configuração evita hardcode espalhado pelo código.
+       * @type {string}
+       */
+      const API_BASE_URL = "http://localhost:8080";
+
+      /**
+       * Normaliza aliases de tipos vindos da URL para os nomes esperados pela API.
+       * @type {Record<string, string>}
+       */
+      const MEDIA_TYPE_MAP = Object.freeze({
+        series: "serie",
+        book: "livro",
+        game: "jogo",
+        movie: "filme",
+      });
+
+      document.addEventListener("DOMContentLoaded", () => {
+        configurarBotaoVoltar();
+        void carregarDetalhes();
+      });
+
+      /**
+       * Retorna os parâmetros da URL atual.
+       *
+       * @returns {URLSearchParams}
+       */
+      function obterParametrosDaUrl() {
+        return new URLSearchParams(window.location.search);
+      }
+
+      /**
+       * Normaliza o tipo da mídia para o formato aceito pela API.
+       *
+       * @param {string} type
+       * @returns {string}
+       */
+      function normalizarTipoMedia(type) {
+        return MEDIA_TYPE_MAP[type] || type;
+      }
+
+      /**
+       * Retorna o primeiro valor existente entre várias chaves possíveis.
+       * Útil para lidar com inconsistências de DTO ou evolução da API.
+       *
+       * @param {Record<string, unknown>} source
+       * @param {string[]} keys
+       * @returns {unknown}
+       */
+      function obterPrimeiroValor(source, keys) {
+        for (const key of keys) {
+          const value = source?.[key];
+
+          if (value !== null && value !== undefined && value !== "") {
+            return value;
+          }
+        }
+
+        return null;
+      }
+
+      /**
+       * Indica se o valor tem conteúdo real para exibição.
+       * Permite exibir números como 0 sem tratá-los como vazios.
+       *
+       * @param {unknown} value
+       * @returns {boolean}
+       */
+      function temConteudo(value) {
+        if (Array.isArray(value)) {
+          return value.length > 0;
+        }
+
+        return value !== null && value !== undefined && value !== "";
+      }
+
+      /**
+       * Converte o valor para texto legível na interface.
+       *
+       * @param {unknown} value
+       * @returns {string}
+       */
+      function formatarValor(value) {
+        if (Array.isArray(value)) {
+          return value.join(", ");
+        }
+
+        return String(value);
+      }
+
+      /**
+       * Cria uma linha de detalhe apenas quando existe conteúdo para exibir.
+       *
+       * @param {string} label
+       * @param {unknown} value
+       * @param {(value: unknown) => string} [formatter]
+       * @returns {HTMLParagraphElement | null}
+       */
+      function criarLinhaDetalhe(label, value, formatter = formatarValor) {
+        if (!temConteudo(value)) {
+          return null;
+        }
+
+        const p = document.createElement("p");
+        const strong = document.createElement("strong");
+
+        strong.className = "info-title";
+        strong.textContent = `${label}:`;
+
+        p.appendChild(strong);
+        p.append(` ${formatter(value)}`);
+
+        return p;
+      }
+
+      /**
+       * Monta a seção de detalhes técnicos com base no objeto retornado pela API.
+       * A renderização é feita com DOM API para reduzir risco de injeção e
+       * manter o markup previsível.
+       *
+       * @param {Record<string, unknown>} media
+       */
+      function renderizarDetalhes(media) {
+        const container = document.getElementById("detalhes-container");
+
+        if (!container) {
+          return;
+        }
+
+        container.replaceChildren();
+
+        const info = document.createElement("div");
+        info.className = "info";
+
+        const tituloPrincipal = document.createElement("h1");
+        tituloPrincipal.textContent = (
+          media.translatedTitle ||
+          media.title ||
+          "Título indisponível"
+        ).toString();
+
+        info.appendChild(tituloPrincipal);
+
+        if (
+          media.translatedTitle &&
+          media.title &&
+          media.translatedTitle !== media.title
+        ) {
+          const tituloOriginal = document.createElement("h3");
+          tituloOriginal.textContent = String(media.title);
+          info.appendChild(tituloOriginal);
+        }
+
+        const sinopse = document.createElement("p");
+        const sinopseStrong = document.createElement("strong");
+        sinopseStrong.className = "info-title";
+        sinopseStrong.textContent = "Sinopse:";
+        sinopse.appendChild(sinopseStrong);
+        sinopse.append(
+          ` ${media.synopsis ? String(media.synopsis) : "Sem sinopse."}`,
+        );
+        info.appendChild(sinopse);
+
+        const detalhesTecnicos = document.createElement("div");
+        detalhesTecnicos.className = "detalhes-tecnicos";
+
+        const detalhes = [
+          { label: "Gêneros", value: media.genres },
+          { label: "Nota", value: media.rating, formatter: (v) => `⭐ ${v}` },
+          { label: "Data de Lançamento", value: media.releaseDate },
+          { label: "Estúdio", value: media.studio },
+          { label: "Episódios", value: media.episodes },
+          {
+            label: "Temporadas",
+            value: obterPrimeiroValor(media, ["seasons", "seasos"]),
+          },
+          { label: "Status", value: media.status },
+          { label: "Onde Assistir", value: media.streamingService },
+          { label: "Páginas", value: media.pagesCount },
+          { label: "Volumes", value: media.volumesCount },
+          { label: "Capítulos", value: media.chaptersCount },
+          { label: "Editora", value: media.publisher },
+          { label: "ISBN", value: media.isbn },
+          { label: "Formato", value: media.format },
+          { label: "Desenvolvedora", value: media.developer },
+          {
+            label: "Plataformas",
+            value: obterPrimeiroValor(media, [
+              "platforms",
+              "platform",
+              "plataform",
+            ]),
+          },
+          {
+            label: "Tempo de Jogo",
+            value: media.playtimeHours,
+            formatter: (v) => `${v}h`,
+          },
+          { label: "Diretor", value: media.director },
+          {
+            label: "Duração",
+            value: media.durationMinutes,
+            formatter: (v) => `${v} min`,
+          },
+          { label: "Produtora", value: media.productionCompany },
+        ];
+
+        detalhes.forEach(({ label, value, formatter }) => {
+          const linha = criarLinhaDetalhe(label, value, formatter);
+
+          if (linha) {
+            detalhesTecnicos.appendChild(linha);
+          }
+        });
+
+        info.appendChild(detalhesTecnicos);
+
+        const imagemDetalhe = document.createElement("div");
+        imagemDetalhe.className = "imagem-detalhe";
+
+        const imagem = document.createElement("img");
+        imagem.src =
+          typeof media.image === "string" && media.image.trim()
+            ? media.image
+            : "https://via.placeholder.com/300x450?text=Sem+Capa";
+        imagem.alt = String(media.title || "Imagem da mídia");
+        imagem.className = "img-info-res";
+
+        imagem.onerror = () => {
+          imagem.src = "https://via.placeholder.com/300x450?text=Sem+Capa";
+        };
+
+        imagemDetalhe.appendChild(imagem);
+
+        container.append(info, imagemDetalhe);
+      }
+
+      /**
+       * Busca os detalhes da mídia usando os parâmetros da URL.
+       * O fluxo foi mantido simples para facilitar depuração e manutenção.
+       *
+       * @returns {Promise<void>}
+       */
+      async function carregarDetalhes() {
+        const params = obterParametrosDaUrl();
+        const id = params.get("id");
+        const typeParam = params.get("type");
+
+        if (!id || !typeParam) {
+          const container = document.getElementById("detalhes-container");
+
+          if (container) {
+            container.innerHTML = "<p>Detalhes indisponíveis.</p>";
+          }
+
+          return;
+        }
+
+        const type = normalizarTipoMedia(typeParam.toLowerCase());
+
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/${type}/${encodeURIComponent(id)}`,
+          );
+
+          if (!response.ok) {
+            throw new Error(
+              `Falha ao carregar detalhes. HTTP ${response.status}`,
+            );
+          }
+
+          const media = await response.json();
+          renderizarDetalhes(media);
+        } catch (error) {
+          console.error("Erro ao carregar detalhes:", error);
+
+          const container = document.getElementById("detalhes-container");
+
+          if (container) {
+            container.innerHTML =
+              "<p>Não foi possível carregar as informações desta mídia.</p>";
+          }
+        }
+      }
+
+      /**
+       * Configura o botão de voltar com fallback para a página inicial.
+       * Isso evita quebrar a navegação quando o usuário entra direto na URL.
+       */
+      function configurarBotaoVoltar() {
+        const btnVoltar = document.getElementById("btn-voltar");
+
+        if (!btnVoltar) {
+          return;
+        }
+
+        btnVoltar.addEventListener("click", (event) => {
+          event.preventDefault();
+
+          if (window.history.length > 1) {
+            window.history.back();
+            return;
+          }
+
+          window.location.href = "index.html";
+        });
+      }
+    </script>
+  </body>
+</html>

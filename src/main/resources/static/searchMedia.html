@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
+    <title>NerdSpace</title>
+    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="icon" href="./img/nerd.png" type="image/x-icon" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="cabecalho"></header>
+
+      <main class="meio">
+        <div class="destaques" id="lista-search">
+          <h2 class="title-search">Destaques</h2>
+          <div id="lista-search-grid" class="grid-midias"></div>
+        </div>
+      </main>
+
+      <footer class="rodape"></footer>
+    </div>
+
+    <script src="./js/script.js"></script>
+    <script>
+      /**
+       * =========================================================
+       * CONFIGURAÇÃO
+       * =========================================================
+       * Centraliza valores que podem mudar sem impactar a lógica.
+       */
+      const CONFIG = Object.freeze({
+        API_BASE_URL: "http://localhost:8080",
+        FALLBACK_IMAGE: "https://via.placeholder.com/200x300?text=Sem+Capa",
+      });
+
+      /**
+       * Normaliza a resposta da API para suportar lista direta ou paginação.
+       *
+       * @param {unknown} data
+       * @returns {Array<Object>}
+       */
+      function extractMediaList(data) {
+        if (Array.isArray(data)) return data;
+        if (Array.isArray(data?.content)) return data.content;
+        return [];
+      }
+
+      /**
+       * Atualiza o título da página com o termo pesquisado.
+       *
+       * @param {string} termo
+       * @param {HTMLElement | null} tituloPagina
+       */
+      function updatePageTitle(termo, tituloPagina) {
+        if (!tituloPagina) return;
+
+        tituloPagina.innerHTML = `Resultados para: <span class="destaque-termo">${termo}</span>`;
+      }
+
+      /**
+       * Cria a imagem clicável de um resultado.
+       *
+       * A navegação fica isolada aqui para simplificar manutenção.
+       *
+       * @param {Object} item
+       * @returns {HTMLImageElement}
+       */
+      function createMediaImage(item) {
+        const img = document.createElement("img");
+
+        img.src = item.image;
+        img.alt = item.translatedTitle || item.title || "Mídia";
+        img.loading = "lazy";
+
+        img.addEventListener("click", () => {
+          const type = (item.type || "").toLowerCase();
+          window.location.href = `infoMedia.html?id=${item.id}&type=${type}`;
+        });
+
+        img.addEventListener("error", () => {
+          img.src = CONFIG.FALLBACK_IMAGE;
+        });
+
+        return img;
+      }
+
+      /**
+       * Busca os resultados e renderiza a grid.
+       *
+       * Decisão:
+       * O endpoint filtra pelo termo, enquanto ano e rating podem ser
+       * reaproveitados em etapas futuras sem travar a página.
+       */
+      async function carregarPesquisa() {
+        const params = new URLSearchParams(window.location.search);
+        const termo = params.get("term")?.trim();
+        const ano = params.get("year");
+        const nota = params.get("minRating");
+
+        const grid = document.getElementById("lista-search-grid");
+        const tituloPagina = document.querySelector(".title-search");
+
+        if (!grid) return;
+
+        if (!termo) {
+          grid.innerHTML = "<p>Digite algo para pesquisar.</p>";
+          return;
+        }
+
+        updatePageTitle(termo, tituloPagina);
+
+        const query = new URLSearchParams({
+          term: termo,
+          size: "100",
+        });
+
+        if (ano) query.set("year", ano);
+        if (nota) query.set("minRating", nota);
+
+        try {
+          grid.innerHTML = "<p>Carregando...</p>";
+
+          const response = await fetch(
+            `${CONFIG.API_BASE_URL}/media/pesquisa?${query.toString()}`,
+          );
+
+          if (!response.ok) {
+            throw new Error(`Erro HTTP: ${response.status}`);
+          }
+
+          const data = await response.json();
+          const lista = extractMediaList(data);
+
+          grid.innerHTML = "";
+
+          if (lista.length === 0) {
+            grid.innerHTML = `<p>Nenhum resultado encontrado para "${termo}".</p>`;
+            return;
+          }
+
+          lista.forEach((item) => {
+            grid.appendChild(createMediaImage(item));
+          });
+        } catch (error) {
+          console.error("Erro na pesquisa:", error);
+          grid.innerHTML =
+            "<p>Erro ao conectar com o servidor. Verifique se a API está ativa.</p>";
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", carregarPesquisa);
+    </script>
+  </body>
+</html>

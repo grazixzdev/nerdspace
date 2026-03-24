@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
+    <title>NerdSpace</title>
+    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="icon" href="./img/nerd.png" type="image/x-icon" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="cabecalho"></header>
+
+      <main class="meio">
+        <div class="destaques" id="lista-search">
+          <h2 class="title-search">Destaques</h2>
+          <div id="lista-search-grid" class="grid-midias"></div>
+        </div>
+      </main>
+
+      <footer class="rodape"></footer>
+    </div>
+
+    <script src="./js/script.js"></script>
+
+    <script>
+      /**
+       * =========================================================
+       * CONFIGURAÇÃO
+       * =========================================================
+       */
+      const CONFIG = Object.freeze({
+        API_BASE_URL: "http://localhost:8080",
+        FALLBACK_IMAGE: "https://via.placeholder.com/200x300?text=Sem+Capa",
+        DEFAULT_YEAR: "0000",
+      });
+
+      function montarTitulo(ano, nota) {
+        let textoTitulo = "Resultados para: ";
+
+        if (ano != null && nota != 0)
+          textoTitulo += `Apartir do ano ${ano} & Nota Maior que ${nota}`;
+        else if (ano != null) textoTitulo += `Apartir do ano ${ano}`;
+        else if (nota != 0) textoTitulo += `Nota ${nota}+`;
+        else textoTitulo += "Todos";
+
+        return textoTitulo;
+      }
+
+      /**
+       * Atualiza o título da página.
+       */
+      function atualizarTituloPagina(tituloPagina, textoTitulo) {
+        if (!tituloPagina) return;
+
+        tituloPagina.innerHTML = `
+          Resultados para:
+          <span class="destaque-termo">
+            ${textoTitulo.replace("Resultados para: ", "")}
+          </span>
+        `;
+      }
+
+      /**
+       * Cria a imagem clicável da mídia.
+       */
+      function criarImagemMedia(item) {
+        const img = document.createElement("img");
+
+        img.className = "img-media";
+        img.src = item.image;
+        img.alt = item.translatedTitle || item.title;
+        img.loading = "lazy";
+
+        img.addEventListener("click", () => {
+          const tipo = item.type.toLowerCase();
+          window.location.href = `infoMedia.html?id=${item.id}&type=${tipo}`;
+        });
+
+        img.addEventListener("error", () => {
+          img.src = CONFIG.FALLBACK_IMAGE;
+        });
+
+        return img;
+      }
+
+      function montarURL(ano, nota) {
+        const urlAPI = new URL(`${CONFIG.API_BASE_URL}/media/filtragem`);
+
+        if (ano) urlAPI.searchParams.append("year", ano);
+        else urlAPI.searchParams.append("year", CONFIG.DEFAULT_YEAR);
+
+        if (nota) urlAPI.searchParams.append("minRating", nota);
+
+        urlAPI.searchParams.append("size", "100");
+
+        return urlAPI;
+      }
+
+      /**
+       * Função principal de carregamento.
+       */
+      async function carregarPesquisa() {
+        const params = new URLSearchParams(window.location.search);
+
+        const ano = params.get("year");
+        const nota = params.get("minRating");
+
+        const grid = document.getElementById("lista-search-grid");
+
+        const tituloPagina = document.querySelector(".title-search");
+
+        if (!grid) return;
+
+        const textoTitulo = montarTitulo(ano, nota);
+
+        atualizarTituloPagina(tituloPagina, textoTitulo);
+
+        const urlAPI = montarURL(ano, nota);
+
+        try {
+          grid.innerHTML = "<p>Carregando...</p>";
+
+          const response = await fetch(urlAPI);
+
+          if (!response.ok) throw new Error("Erro na requisição");
+
+          const data = await response.json();
+
+          const lista = data.content;
+
+          grid.innerHTML = "";
+
+          if (!lista || lista.length === 0) {
+            grid.innerHTML = `
+              <p style="
+                color: var(--color4);
+                font-size: 1.5rem;
+                grid-column: 1/-1;
+              ">
+                Nenhuma mídia encontrada com esses filtros.
+              </p>
+            `;
+            return;
+          }
+
+          lista.forEach((item) => {
+            grid.appendChild(criarImagemMedia(item));
+          });
+        } catch (error) {
+          console.error("Erro na filtragem:", error);
+
+          grid.innerHTML = `
+            <p>
+              Erro ao conectar com o servidor.
+              Tente novamente mais tarde.
+            </p>
+          `;
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", carregarPesquisa);
+    </script>
+  </body>
+</html>

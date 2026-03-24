@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Notícia - NerdSpace</title>
+    <link rel="stylesheet" href="./css/style.css" />
+    <link rel="icon" href="./img/nerd.png" type="image/x-icon" />
+  </head>
+  <body>
+    <div class="container">
+      <main class="meio-noticia">
+        <div id="noticia-conteudo" class="noticia-full">
+          <p>Carregando notícia...</p>
+        </div>
+
+        <div class="btns-acoes">
+          <a href="index.html" class="btn-voltar-noticia"
+            >← Voltar para a Home</a
+          >
+        </div>
+      </main>
+    </div>
+
+    <script>
+      /**
+       * =========================================================
+       * CONFIGURATION
+       * =========================================================
+       * Centraliza valores que podem mudar sem afetar a lógica.
+       */
+      const CONFIG = Object.freeze({
+        API_BASE_URL: "http://localhost:8080",
+        FALLBACK_IMAGE: "https://via.placeholder.com/900x400?text=Sem+Imagem",
+      });
+
+      /**
+       * Formata datas recebidas da API em um padrão legível.
+       *
+       * Mantém compatibilidade com ISO string e com arrays de data
+       *
+       * @param {string | Array<number>} rawDate
+       * @returns {string}
+       */
+      function formatDate(rawDate) {
+        if (!rawDate) return "Data indisponível";
+
+        const date = Array.isArray(rawDate)
+          ? new Date(
+              rawDate[0],
+              rawDate[1] - 1,
+              rawDate[2],
+              rawDate[3] || 0,
+              rawDate[4] || 0,
+            )
+          : new Date(rawDate);
+
+        if (Number.isNaN(date.getTime())) {
+          return "Data indisponível";
+        }
+
+        return date.toLocaleDateString("pt-BR", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        });
+      }
+
+      /**
+       * Converte o conteúdo da notícia em parágrafos.
+       *
+       * A quebra por linha preserva a estrutura do texto sem depender
+       * de HTML vindo da API.
+       *
+       * @param {string} content
+       * @returns {string}
+       */
+      function renderParagraphs(content) {
+        if (!content) return "<p>Conteúdo indisponível.</p>";
+
+        return content
+          .split("\n")
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .map((line) => `<p>${line}</p>`)
+          .join("");
+      }
+
+      /**
+       * Busca os dados da notícia por ID.
+       *
+       * @param {string} id
+       * @returns {Promise<Object>}
+       */
+      async function fetchNewsById(id) {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/noticia/${id}`);
+
+        if (!response.ok) {
+          throw new Error(`Erro HTTP: ${response.status}`);
+        }
+
+        return response.json();
+      }
+
+      /**
+       * Renderiza a notícia completa na tela.
+       *
+       * @param {Object} noticia
+       */
+      function renderNews(noticia) {
+        const container = document.getElementById("noticia-conteudo");
+        if (!container) return;
+
+        container.innerHTML = `
+          <div class="noticia-header">
+            <span class="noticia-meta">
+              ${formatDate(noticia.timePosted || noticia.time_posted)}
+            </span>
+
+            <h1>${noticia.title || "Sem título"}</h1>
+
+            ${
+              noticia.subTitle
+                ? `<h2 class="subtitle-noticia">${noticia.subTitle}</h2>`
+                : ""
+            }
+          </div>
+
+          <div class="noticia-banner">
+            <img
+              src="${noticia.image || CONFIG.FALLBACK_IMAGE}"
+              alt="${noticia.title || "Notícia"}"
+            />
+          </div>
+
+          <div class="noticia-texto">
+            ${renderParagraphs(noticia.content)}
+          </div>
+        `;
+      }
+
+      /**
+       * Carrega a notícia com base no parâmetro da URL.
+       *
+       * A página depende do ID porque a rota já entrega
+       * o contexto necessário para exibir o conteúdo completo.
+       */
+      async function loadNewsDetails() {
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get("id");
+
+        if (!id) {
+          window.location.href = "index.html";
+          return;
+        }
+
+        try {
+          const noticia = await fetchNewsById(id);
+          renderNews(noticia);
+        } catch (error) {
+          console.error("Erro ao carregar notícia:", error);
+
+          const container = document.getElementById("noticia-conteudo");
+          if (container) {
+            container.innerHTML = "<p>Erro ao carregar a notícia.</p>";
+          }
+        }
+      }
+
+      /**
+       * Inicialização da página.
+       */
+      document.addEventListener("DOMContentLoaded", loadNewsDetails);
+    </script>
+  </body>
+</html>
