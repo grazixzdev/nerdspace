@@ -7,6 +7,21 @@ A ideia principal foi criar um sistema unificado de mídias, mas mantendo flexib
 
 ---
 
+## 📸 Preview
+
+![Home](docs/home.png)
+
+![Busca](docs/search.png)
+
+![Media_Detalhes](docs/media-details.png)
+
+![Filtragem](docs/filter-modal.png)
+
+![Noticias](docs/news.png)
+
+
+---
+
 <div class="languages-svg" align="center">
         <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/html5/html5-original.svg" alt="HTML5" width="50px">
         <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/css3/css3-original.svg" alt="CSS3" width="50px">
